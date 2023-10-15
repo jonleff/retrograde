@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<title>Retrograde</title>
+
+	<style type="text/css">
+		
+		body {
+			background-color: #ccc;
+			color: #000;
+			font-family: sans-serif;
+			user-select: none;
+		}
+
+		/* Remove the default focus styles for the button */
+		*:focus {
+		    outline: none;
+		}
+
+
+	</style>
+
+</head>
+
+<body>
+
+<canvas id="canvas"></canvas>
+
+<script type="module">
+
+// Import modules
+import * as THREE from 'https://unpkg.com/three@0.120.1/build/three.module.js';
+import {OrbitControls} from 'https://threejsfundamentals.org/threejs/resources/threejs/r122/examples/jsm/controls/OrbitControls.js';
+//import {DragControls} from 'https://threejsfundamentals.org/threejs/resources/threejs/r122/examples/jsm/controls/DragControls.js';
+import {EffectComposer} from 'https://threejsfundamentals.org/threejs/resources/threejs/r122/examples/jsm/postprocessing/EffectComposer.js';
+import {RenderPass} from 'https://threejsfundamentals.org/threejs/resources/threejs/r122/examples/jsm/postprocessing/RenderPass.js';
+import {UnrealBloomPass} from 'https://threejsfundamentals.org/threejs/resources/threejs/r122/examples/jsm/postprocessing/UnrealBloomPass.js';
+import {ShaderPass} from 'https://threejsfundamentals.org/threejs/resources/threejs/r122/examples/jsm/postprocessing/ShaderPass.js';
+
+
+
+// Instantiate the scene and set parameters
+let scene = new THREE.Scene();
+scene.background = new THREE.Color("black");
+
+let canvas = document.getElementById("canvas");
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+
+// Instantiate renderer and set parameters
+let renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio( window.devicePixelRatio );
+renderer.setSize( window.innerWidth, window.innerHeight );
+document.body.appendChild( renderer.domElement );
+
+// Instantiate camera and set parameters
+let camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 1000 );
+camera.position.set( 0, 50, 0 );
+
+// Instantiate orbit orbitControls and set parameters
+let orbitControls = new OrbitControls( camera, renderer.domElement );
+orbitControls.minDistance = 0;
+orbitControls.maxDistance = 150;
+orbitControls.enablePan = false;    // Disable panning
+orbitControls.enableRotate = false; // Disable orbiting
+orbitControls.enableZoom = true;    // Enable zooming
+
+let starGeometry = new THREE.SphereGeometry(5, 64, 32); 
+let starMaterial = new THREE.MeshBasicMaterial({color: 0xffff00}); 
+let star = new THREE.Mesh(starGeometry, starMaterial);
+
+let landerGeometry = new THREE.BoxGeometry(1, 1, 1);
+let landerMaterial = new THREE.MeshBasicMaterial({color: 0xffff00}); 
+let lander = new THREE.Mesh(landerGeometry, landerMaterial);
+
+let stationGeometry = new THREE.BoxGeometry(1, 1, 1);
+let stationMaterial = new THREE.MeshBasicMaterial({color: 0x00ff00}); 
+let station = new THREE.Mesh(stationGeometry, stationMaterial);
+
+scene.add(star);
+scene.add(lander);
+scene.add(station);
+
+let fuel = 100;
+
+
+let lander_x = 0;
+let lander_y = 0;
+let lander_z = 0;
+
+let station_x = 0;
+let station_y = 0;
+let station_z = 0;
+
+let lander_vx = 0;
+let lander_vy = 0;
+let lander_vz = 0;
+
+let station_vx = 0;
+let station_vy = 0;
+let station_vz = 0;
+
+let stellarMass = 1;
+let G = 1;
+
+let u_x = 0;
+let u_y = 1;
+let u_z = 0;
+
+let eccentricity = 1;
+
+let thrust = 0.001;
+
+let progradeBurn = false;
+let retrogradeBurn = false;
+
+load();
+animate();
+
+function load() {
+
+	// Orbital injection logic
+	var lander_r = Math.random() * (15 - 10) + 10;
+	let lander_phi = Math.PI / 2;
+	let lander_theta = Math.random() * 2 * Math.PI;
+
+	var station_r = Math.random() * (15 - 10) + 10;
+	let station_phi = Math.PI / 2;
+	let station_theta = Math.random() * 2 * Math.PI;
+
+	lander_x = lander_r * Math.cos(lander_theta) * Math.sin(lander_phi);
+	lander_z = lander_r * Math.sin(lander_theta) * Math.sin(lander_phi);
+	lander_y = lander_r * Math.cos(lander_phi);
+
+	station_x = station_r * Math.cos(station_theta) * Math.sin(station_phi);
+	station_z = station_r * Math.sin(station_theta) * Math.sin(station_phi);
+	station_y = station_r * Math.cos(station_phi);
+
+	// Distance between stellar COM and injection point
+	let rLander = Math.sqrt((lander_x * lander_x) + (lander_y * lander_y) + (lander_z * lander_z));
+
+	// Distance between stellar COM and injection point
+	let rStation = Math.sqrt((station_x * station_x) + (station_y * station_y) + (station_z * station_z));
+
+	// Normalized vector to store initial velocity direction
+	// v0Hat is cross product of u and r
+	let v0HatLander_x = (u_y * lander_z) - (u_z * lander_y);
+	let v0HatLander_y = (u_z * lander_x) - (u_x * lander_z);
+	let v0HatLander_z = (u_x * lander_y) - (u_y * lander_x);
+
+	let v0HatStation_x = (u_y * station_z) - (u_z * station_y);
+	let v0HatStation_y = (u_z * station_x) - (u_x * station_z);
+	let v0HatStation_z = (u_x * station_y) - (u_y * station_x);
+
+	// Normalize v0Hat
+	let v0HatLanderMag = Math.sqrt((v0HatLander_x * v0HatLander_x) + (v0HatLander_y * v0HatLander_y) + (v0HatLander_z * v0HatLander_z));
+
+	let v0HatStationMag = Math.sqrt((v0HatStation_x * v0HatStation_x) + (v0HatStation_y * v0HatStation_y) + (v0HatStation_z * v0HatStation_z));
+
+	v0HatLander_x /= v0HatLanderMag;
+	v0HatLander_y /= v0HatLanderMag;
+	v0HatLander_z /= v0HatLanderMag;
+
+	v0HatStation_x /= v0HatStationMag;
+	v0HatStation_y /= v0HatStationMag;
+	v0HatStation_z /= v0HatStationMag;
+
+	// Calculate the tangential velocity for circular orbit
+	// Scale this velocity by user inputted eccentricity parameter
+	let vTanLander = eccentricity * Math.sqrt((G * stellarMass) / rLander);
+	let vTanStation = eccentricity * Math.sqrt((G * stellarMass) / rStation);
+
+	// Set the initial velocity with the magnitude of tangential velocity
+	lander_vx = v0HatLander_x * vTanLander;
+	lander_vy = v0HatLander_y * vTanLander;
+	lander_vz = v0HatLander_z * vTanLander;
+
+	station_vx = v0HatStation_x * vTanStation;
+	station_vy = v0HatStation_y * vTanStation;
+	station_vz = v0HatStation_z * vTanStation;
+
+	lander.position.x = lander_x;
+	lander.position.y = lander_y;
+	lander.position.z = lander_z;
+
+	station.position.x = station_x;
+	station.position.y = station_y;
+	station.position.z = station_z;
+
+
+}
+
+function move() {
+
+	let rLander = Math.sqrt((lander_x * lander_x) + (lander_y * lander_y) + (lander_z * lander_z));
+
+	let rStation = Math.sqrt((station_x * station_x) + (station_y * station_y) + (station_z * station_z));
+
+	// Sucked into star
+	if (rLander < 1) {
+		console.log("crashed")
+	}
+
+	let forceLander = -(G * stellarMass) / (rLander * rLander);
+	let forceStation = -(G * stellarMass) / (rStation * rStation);
+
+	let aLander_x = (forceLander * lander_x) / rLander;
+	let aLander_y = (forceLander * lander_y) / rLander;
+	let aLander_z = (forceLander * lander_z) / rLander;
+
+	let aStation_x = (forceStation * station_x) / rStation;
+	let aStation_y = (forceStation * station_y) / rStation;
+	let aStation_z = (forceStation * station_z) / rStation;
+
+	lander_vx += aLander_x;
+	lander_vy += aLander_y;
+	lander_vz += aLander_z;
+
+	station_vx += aStation_x;
+	station_vy += aStation_y;
+	station_vz += aStation_z;
+
+	if (progradeBurn) {
+
+	    // Calculate the velocity vector's magnitude
+	    let velocityMag = Math.sqrt(
+	        lander_vx * lander_vx + lander_vy * lander_vy + lander_vz * lander_vz
+	    );
+
+	    // Calculate the unit vector in the direction of the current velocity
+	    let vHat_x = lander_vx / velocityMag;
+	    let vHat_y = lander_vy / velocityMag;
+	    let vHat_z = lander_vz / velocityMag;
+
+		// Update the velocity with the deltaV in the prograde direction
+		lander_vx += vHat_x * thrust;
+		lander_vy += vHat_y * thrust;
+		lander_vz += vHat_z * thrust;
+
+	}
+
+	if (retrogradeBurn) {
+
+	    // Calculate the velocity vector's magnitude
+	    let velocityMag = Math.sqrt(
+	        lander_vx * lander_vx + lander_vy * lander_vy + lander_vz * lander_vz
+	    );
+
+	    // Calculate the unit vector in the direction of the current velocity
+	    let vHat_x = lander_vx / velocityMag;
+	    let vHat_y = lander_vy / velocityMag;
+	    let vHat_z = lander_vz / velocityMag;
+
+		// Update the velocity with the deltaV in the prograde direction
+		lander_vx += vHat_x * -thrust;
+		lander_vy += vHat_y * -thrust;
+		lander_vz += vHat_z * -thrust;
+
+	}
+
+	lander_x += lander_vx;
+	lander_y += lander_vy;
+	lander_z += lander_vz;
+
+	station_x += station_vx;
+	station_y += station_vy;
+	station_z += station_vz;
+
+	lander.position.x = lander_x;
+	lander.position.y = lander_y;
+	lander.position.z = lander_z;
+
+	station.position.x = station_x;
+	station.position.y = station_y;
+	station.position.z = station_z;
+		
+}
+
+
+function futureOrbits() {
+
+	const numSteps = 500; // Adjust the number of steps as needed
+	const timeStep = 0.01; // Adjust the time step as needed
+
+	let futurePathLander = [];
+	let futurePathStation = [];
+
+	let predictedLander_x = lander_x;
+	let predictedLander_y = lander_y;
+	let predictedLander_z = lander_z;
+
+	let predictedStation_x = station_x;
+	let predictedStation_y = station_y;
+	let predictedStation_z = station_z;
+
+
+
+}
+
+function animate() {
+
+	requestAnimationFrame(animate);
+	renderer.render(scene, camera);
+
+	move();
+
+
+}
+
+window.addEventListener("keydown", (event) => {
+	if (event.key == "p") {
+		progradeBurn = true;
+		event.preventDefault();
+	} else if (event.key == "r") {
+		retrogradeBurn = true;
+	}
+});
+
+window.addEventListener("keyup", (event) => {
+	if (event.key == "p") {
+		progradeBurn = false;
+		event.preventDefault();
+	} else if (event.key == "r") {
+		retrogradeBurn = false;
+	}
+});
+
+
+</script>
+</body>
+</html>
