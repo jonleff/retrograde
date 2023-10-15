@@ -86,7 +86,6 @@ scene.add(station);
 
 let fuel = 100;
 
-
 let lander_x = 0;
 let lander_y = 0;
 let lander_z = 0;
@@ -116,6 +115,32 @@ let thrust = 0.001;
 
 let progradeBurn = false;
 let retrogradeBurn = false;
+
+// Create orbit line materials
+let landerPathMaterial = new THREE.LineBasicMaterial({
+  color: 0xffff00,
+  linewidth: 2,
+});
+
+// Create orbit line materials
+let stationPathMaterial = new THREE.LineBasicMaterial({
+  color: 0x00ff00,
+  linewidth: 2,
+});
+
+
+// Create orbit line geometries for future orbital paths
+let landerPathGeometry = new THREE.BufferGeometry().setFromPoints([]);
+let stationPathGeometry = new THREE.BufferGeometry().setFromPoints([]);
+
+// Create orbit lines for future orbital paths
+let landerPathLine = new THREE.Line(landerPathGeometry, landerPathMaterial);
+let stationPathLine = new THREE.Line(stationPathGeometry, stationPathMaterial);
+
+// Add the future orbit lines to the scene
+scene.add(landerPathLine);
+scene.add(stationPathLine);
+
 
 load();
 animate();
@@ -282,19 +307,92 @@ function move() {
 
 function futureOrbits() {
 
-	const numSteps = 500; // Adjust the number of steps as needed
-	const timeStep = 0.01; // Adjust the time step as needed
+	scene.remove(landerPathLine);
+	scene.remove(stationPathLine);
 
-	let futurePathLander = [];
-	let futurePathStation = [];
 
-	let predictedLander_x = lander_x;
-	let predictedLander_y = lander_y;
-	let predictedLander_z = lander_z;
+	let numSteps = 1000; // Adjust the number of steps as needed
+	let timeStep = 1; // Adjust the time step as needed
 
-	let predictedStation_x = station_x;
-	let predictedStation_y = station_y;
-	let predictedStation_z = station_z;
+	let landerPath = [];
+	let stationPath = [];
+
+	let lander_x_pred = lander_x;
+	let lander_y_pred = lander_y;
+	let lander_z_pred = lander_z;
+
+	let lander_vx_pred = lander_vx;
+	let lander_vy_pred = lander_vy;
+	let lander_vz_pred = lander_vz;
+
+	let station_x_pred = station_x;
+	let station_y_pred = station_y;
+	let station_z_pred = station_z;
+
+	let station_vx_pred = station_vx;
+	let station_vy_pred = station_vy;
+	let station_vz_pred = station_vz;
+
+
+	for (let step = 0; step < numSteps; step++) {
+
+		let rLander_pred = Math.sqrt((lander_x_pred * lander_x_pred) + (lander_y_pred * lander_y_pred) + (lander_z_pred * lander_z_pred));
+		let rStation_pred = Math.sqrt((station_x_pred * station_x_pred) + (station_y_pred * station_y_pred) + (station_z_pred * station_z_pred));
+
+		let forceLander_pred = -(G * stellarMass) / (rLander_pred * rLander_pred);
+		let forceStation_pred = -(G * stellarMass) / (rStation_pred * rStation_pred);
+
+		let aLander_x_pred = (forceLander_pred * lander_x_pred) / rLander_pred;
+		let aLander_y_pred = (forceLander_pred * lander_y_pred) / rLander_pred;
+		let aLander_z_pred = (forceLander_pred * lander_z_pred) / rLander_pred;
+
+		let aStation_x_pred = (forceStation_pred * station_x_pred) / rStation_pred;
+		let aStation_y_pred = (forceStation_pred * station_y_pred) / rStation_pred;
+		let aStation_z_pred = (forceStation_pred * station_z_pred) / rStation_pred;
+
+		lander_vx_pred += aLander_x_pred;
+		lander_vy_pred += aLander_y_pred;
+		lander_vz_pred += aLander_z_pred;
+
+		station_vx_pred += aStation_x_pred;
+		station_vy_pred += aStation_y_pred;
+		station_vz_pred += aStation_z_pred;
+
+	    // Predict future positions based on current positions and velocities
+	    lander_x_pred += lander_vx_pred * timeStep;
+	    lander_y_pred += lander_vy_pred * timeStep;
+	    lander_z_pred += lander_vz_pred * timeStep;
+
+	    station_x_pred += station_vx_pred * timeStep;
+	    station_y_pred += station_vy_pred * timeStep;
+	    station_z_pred += station_vz_pred * timeStep;
+
+	    // Store the predicted positions in the arrays
+	    landerPath.push(new THREE.Vector3(
+	    	lander_x_pred, 
+	    	lander_y_pred, 
+	    	lander_z_pred
+	    ));
+	    
+	    stationPath.push(new THREE.Vector3(
+	    	station_x_pred, 
+	    	station_y_pred, 
+	    	station_z_pred
+	    ));	
+
+	}
+
+	// Create orbit line geometries for future orbital paths
+	landerPathGeometry = new THREE.BufferGeometry().setFromPoints(landerPath);
+	stationPathGeometry = new THREE.BufferGeometry().setFromPoints(stationPath);
+
+	// Create orbit lines for future orbital paths
+	landerPathLine = new THREE.Line(landerPathGeometry, landerPathMaterial);
+	stationPathLine = new THREE.Line(stationPathGeometry, stationPathMaterial);
+
+	// Add the future orbit lines to the scene
+	scene.add(landerPathLine);
+	scene.add(stationPathLine);
 
 
 
@@ -306,6 +404,7 @@ function animate() {
 	renderer.render(scene, camera);
 
 	move();
+	futureOrbits();
 
 
 }
