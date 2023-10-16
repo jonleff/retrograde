@@ -28,7 +28,7 @@
 
 <canvas id="canvas"></canvas>
 
-<div style="position: absolute; top: 20px; left: 20px; color: white;">
+<div style="position: absolute; top: 20px; left: 20px; color: white; font-size: 1.5em;">
 	
 	<table>
 		<tr>
@@ -37,9 +37,32 @@
 		</tr>
 		<tr>
 			<td>Fuel</td>
-			<td id="fuelMeter">1000</td>
+			<td id="fuelMeter">100</td>
 		</tr>
 	</table>
+
+	<br>
+
+	<table>
+		
+		<tr>
+			<td style="width: 200px;">Orbital Velocity</td>
+			<td id="orbitalVelocityMeter">0</td>
+		</tr>
+
+		<tr>
+			<td>Altitude</td>
+			<td id="altitudeMeter">0</td>
+		</tr>
+
+	</table>
+
+	<button>Prograde Burn</button>
+
+	<br>
+
+	<button>Retrograde Burn</button>
+
 
 
 </div>
@@ -54,8 +77,7 @@ import {EffectComposer} from 'https://threejsfundamentals.org/threejs/resources/
 import {RenderPass} from 'https://threejsfundamentals.org/threejs/resources/threejs/r122/examples/jsm/postprocessing/RenderPass.js';
 import {UnrealBloomPass} from 'https://threejsfundamentals.org/threejs/resources/threejs/r122/examples/jsm/postprocessing/UnrealBloomPass.js';
 import {ShaderPass} from 'https://threejsfundamentals.org/threejs/resources/threejs/r122/examples/jsm/postprocessing/ShaderPass.js';
-
-
+import {GLTFLoader} from 'https://threejsfundamentals.org/threejs/resources/threejs/r122/examples/jsm/loaders/GLTFLoader.js';
 
 // Instantiate the scene and set parameters
 let scene = new THREE.Scene();
@@ -84,8 +106,9 @@ let orbitControls = new OrbitControls( camera, renderer.domElement );
 orbitControls.minDistance = 0;
 orbitControls.maxDistance = 150;
 orbitControls.enablePan = false;    // Disable panning
-orbitControls.enableRotate = false; // Disable orbiting
+orbitControls.enableRotate = true; // Disable orbiting
 orbitControls.enableZoom = true;    // Enable zooming
+orbitControls.maxPolarAngle = ((1 / 3) * Math.PI) + 0.2;
 
 let starGeometry = new THREE.SphereGeometry(5, 64, 32); 
 let starMaterial = new THREE.MeshBasicMaterial({color: 0xffff00}); 
@@ -93,19 +116,30 @@ let star = new THREE.Mesh(starGeometry, starMaterial);
 
 let dt = 0.5;
 
+let docked = false;
+let crashed = false;
+let docked_x = 0;
+let docked_y = 0;
+let docked_z = 0;
+
 let landerGeometry = new THREE.BoxGeometry(0.5, 1, 1);
-let landerMaterial = new THREE.MeshBasicMaterial({color: 0xffff00}); 
+let landerMaterial = new THREE.MeshBasicMaterial({color: 0x00ff00}); 
 let lander = new THREE.Mesh(landerGeometry, landerMaterial);
 
 let stationGeometry = new THREE.BoxGeometry(1, 1, 1);
-let stationMaterial = new THREE.MeshBasicMaterial({color: 0x00ff00}); 
+let stationMaterial = new THREE.MeshBasicMaterial({color: 0xffffff}); 
 let station = new THREE.Mesh(stationGeometry, stationMaterial);
 
 scene.add(star);
 scene.add(lander);
 scene.add(station);
 
-let fuel = 1000;
+
+
+
+
+
+let fuel = 100;
 let fuelMultiplier = 200;
 
 let lander_x = 0;
@@ -133,7 +167,7 @@ let u_z = 0;
 
 let eccentricity = 1;
 
-let thrust = 0.001;
+let thrust = 0.003;
 
 let progradeBurn = false;
 let retrogradeBurn = false;
@@ -141,13 +175,13 @@ let radialBurn = false;
 
 // Create orbit line materials
 let landerPathMaterial = new THREE.LineBasicMaterial({
-  color: 0xffff00,
+  color: 0x00ff00,
   linewidth: 4,
 });
 
 // Create orbit line materials
-let stationPathMaterial = new THREE.LineDashedMaterial({
-  color: 0x00ff00,
+let stationPathMaterial = new THREE.LineBasicMaterial({
+  color: 0xffffff,
   linewidth: 4,
 });
 
@@ -166,6 +200,40 @@ scene.add(stationPathLine);
 
 
 let fuelMeter = document.getElementById("fuelMeter");
+let orbitalVelocityMeter = document.getElementById("orbitalVelocityMeter");
+let altitudeMeter = document.getElementById("altitudeMeter");
+
+
+let starfieldGeometry = new THREE.BoxGeometry(0.3, 0.3, 0.3);
+let starfieldMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+
+let starCount = 1000; // Adjust the number of stars as needed
+let starfield = new THREE.InstancedMesh(starfieldGeometry, starfieldMaterial, starCount);
+let matrix = new THREE.Matrix4();
+
+for (let i = 0; i < starCount; i++) {
+	
+	let x, y, z;
+	
+	do {
+		x = (Math.random() - 0.5) * 500;
+		y = (Math.random() - 0.5) * 500;
+		z = (Math.random() - 0.5) * 500;
+	} while (
+		Math.sqrt((x * x) + (y * y) + (z * z)) <= 150
+	); 
+
+  matrix.setPosition(x, y, z);
+  starfield.setMatrixAt(i, matrix);
+
+}
+
+scene.add(starfield);
+
+
+
+
+
 
 load();
 animate();
@@ -247,13 +315,30 @@ function load() {
 
 function move() {
 
+	let landerStationDistance = Math.sqrt(
+		((lander_x - station_x) * (lander_x - station_x)) + 
+		((lander_y - station_y) * (lander_y - station_y)) + 
+		((lander_z - station_z) * (lander_z - station_z))
+	);
+
+	if (!docked && landerStationDistance <= 1) {
+		
+		console.log("Docking successful");
+
+		docked = true;
+		docked_x = lander_x - station_x;
+		docked_y = lander_y - station_y;
+		docked_z = lander_z - station_z;
+	}
+
 	let rLander = Math.sqrt((lander_x * lander_x) + (lander_y * lander_y) + (lander_z * lander_z));
 
 	let rStation = Math.sqrt((station_x * station_x) + (station_y * station_y) + (station_z * station_z));
 
 	// Sucked into star
-	if (rLander < 1) {
-		console.log("crashed")
+	if (rLander <= 5) {
+		console.log("crashed");
+		crashed = true;
 	}
 
 	let forceLander = -(G * stellarMass) / (rLander * rLander);
@@ -288,12 +373,17 @@ function move() {
 	    let vHat_z = lander_vz / velocityMag;
 
 		// Update the velocity with the deltaV in the prograde direction
-		lander_vx += vHat_x * thrust * dt;
-		lander_vy += vHat_y * thrust * dt;
-		lander_vz += vHat_z * thrust * dt;
+		
+		if (fuel > 0) {
+			lander_vx += vHat_x * thrust * dt;
+			lander_vy += vHat_y * thrust * dt;
+			lander_vz += vHat_z * thrust * dt;
 
-		fuel -= thrust * fuelMultiplier * dt;
-		fuelMeter.innerHTML = Math.round(fuel * 100) / 100;
+			fuel -= thrust * fuelMultiplier * dt;
+			fuel = Math.max(fuel, 0);
+			fuelMeter.innerHTML = (Math.round(fuel * 100) / 100).toFixed(2);
+		}
+
 
 	}
 
@@ -309,13 +399,15 @@ function move() {
 	    let vHat_y = lander_vy / velocityMag;
 	    let vHat_z = lander_vz / velocityMag;
 
-		// Update the velocity with the deltaV in the prograde direction
-		lander_vx += vHat_x * -thrust * dt;
-		lander_vy += vHat_y * -thrust * dt;
-		lander_vz += vHat_z * -thrust * dt;
+		if (fuel > 0) {
+			lander_vx += vHat_x * -thrust * dt;
+			lander_vy += vHat_y * -thrust * dt;
+			lander_vz += vHat_z * -thrust * dt;
 
-		fuel -= thrust * fuelMultiplier * dt;
-		fuelMeter.innerHTML = Math.round(fuel * 100) / 100;
+			fuel -= thrust * fuelMultiplier * dt;
+			fuel = Math.max(fuel, 0);
+			fuelMeter.innerHTML = (Math.round(fuel * 100) / 100).toFixed(2);
+		}
 
 	}
 
@@ -334,23 +426,35 @@ function move() {
 	    vHat_y = vHat_y / velocityMag;
 	    vHat_z = vHat_z / velocityMag;
 
-		// Update the velocity with the deltaV in the prograde direction
-		lander_vx += vHat_x * thrust * dt;
-		lander_vy += vHat_y * thrust * dt;
-		lander_vz += vHat_z * thrust * dt;
+		if (fuel > 0) {
+			lander_vx += vHat_x * thrust * dt;
+			lander_vy += vHat_y * thrust * dt;
+			lander_vz += vHat_z * thrust * dt;
 
-		fuel -= thrust * fuelMultiplier * dt;
-		fuelMeter.innerHTML = Math.round(fuel * 100) / 100;
+			fuel -= thrust * fuelMultiplier * dt;
+			fuel = Math.max(fuel, 0);
+			fuelMeter.innerHTML = (Math.round(fuel * 100) / 100).toFixed(2);
+		}
 
 	}
-
-	lander_x += lander_vx * dt;
-	lander_y += lander_vy * dt;
-	lander_z += lander_vz * dt;
 
 	station_x += station_vx * dt;
 	station_y += station_vy * dt;
 	station_z += station_vz * dt;
+
+	if (crashed) {
+		lander_x = 0;
+		lander_y = 0;
+		lander_z = 0;
+	} else if (docked) {
+		lander_x = station_x + docked_x;
+		lander_y = station_y + docked_y;
+		lander_z = station_z + docked_z;
+	} else {
+		lander_x += lander_vx * dt;
+		lander_y += lander_vy * dt;
+		lander_z += lander_vz * dt;
+	}
 
 	lander.position.x = lander_x;
 	lander.position.y = lander_y;
@@ -359,15 +463,29 @@ function move() {
 	station.position.x = station_x;
 	station.position.y = station_y;
 	station.position.z = station_z;
-		
+
+	let lander_v = Math.sqrt(
+		(lander_vx * lander_vx) + 
+		(lander_vy * lander_vy) + 
+		(lander_vz * lander_vz)
+	);
+
+	// this is not very efficient
+	rLander = Math.sqrt((lander_x * lander_x) + (lander_y * lander_y) + (lander_z * lander_z));
+
+	orbitalVelocityMeter.innerHTML = (Math.round(lander_v * 100) / 100).toFixed(2);
+	altitudeMeter.innerHTML = (Math.round(rLander * 100) / 100).toFixed(2);
+
 }
+
+
+
 
 
 function futureOrbits() {
 
 	scene.remove(landerPathLine);
 	scene.remove(stationPathLine);
-
 
 	let numSteps = 1000; // Adjust the number of steps as needed
 	let timeStep = 1; // Adjust the time step as needed
@@ -449,7 +567,11 @@ function futureOrbits() {
 	stationPathLine = new THREE.Line(stationPathGeometry, stationPathMaterial);
 
 	// Add the future orbit lines to the scene
-	scene.add(landerPathLine);
+	
+	if (!docked && !crashed) {
+		scene.add(landerPathLine);
+	}
+
 	scene.add(stationPathLine);
 
 
@@ -475,6 +597,13 @@ window.addEventListener("keydown", (event) => {
 		retrogradeBurn = true;
 	} else if (event.key == "g") {
 		radialBurn = true;
+	} else if (event.key == "s") {
+		if (dt == 0.1) {
+			dt = 0.5
+		} else {
+			dt = 0.1
+		}
+
 	}
 });
 

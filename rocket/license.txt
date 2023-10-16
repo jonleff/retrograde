@@ -1,0 +1,11 @@
+Model Information:
+* title:	Metallic Rocket Cocktail Shaker
+* source:	https://sketchfab.com/3d-models/metallic-rocket-cocktail-shaker-379336c0082e4c42ab2ae009ed92f563
+* author:	beeclark (https://sketchfab.com/beeclark)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Metallic Rocket Cocktail Shaker" (https://sketchfab.com/3d-models/metallic-rocket-cocktail-shaker-379336c0082e4c42ab2ae009ed92f563) by beeclark (https://sketchfab.com/beeclark) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
