@@ -165,8 +165,6 @@ let u_x = 0;
 let u_y = 1;
 let u_z = 0;
 
-let eccentricity = 1;
-
 let thrust = 0.003;
 
 let progradeBurn = false;
@@ -290,7 +288,7 @@ function load() {
 
 	// Calculate the tangential velocity for circular orbit
 	// Scale this velocity by user inputted eccentricity parameter
-	let vTanLander = eccentricity * Math.sqrt((G * stellarMass) / rLander);
+	let vTanLander =  Math.sqrt((G * stellarMass) / rLander);
 	let vTanStation = ((Math.random() * 0.3) + 1) * Math.sqrt((G * stellarMass) / rStation);
 
 	// Set the initial velocity with the magnitude of tangential velocity
