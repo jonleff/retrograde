@@ -108,7 +108,7 @@ orbitControls.maxDistance = 150;
 orbitControls.enablePan = false;    // Disable panning
 orbitControls.enableRotate = true; // Disable orbiting
 orbitControls.enableZoom = true;    // Enable zooming
-orbitControls.maxPolarAngle = ((1 / 3) * Math.PI) + 0.2;
+orbitControls.maxPolarAngle = ((1 / 3) * Math.PI) + 0.4;
 
 let starGeometry = new THREE.SphereGeometry(5, 64, 32); 
 let starMaterial = new THREE.MeshBasicMaterial({color: 0xffff00}); 
@@ -136,8 +136,73 @@ scene.add(station);
 
 
 
+let landerGroup = new THREE.Group();
 
 
+let lander1Geometry = new THREE.SphereGeometry(0.75, 64, 32); 
+let lander2Geometry = new THREE.CylinderGeometry(0.75, 0.75 * 1.5, 1, 64);
+let lander3Geometry = new THREE.CylinderGeometry(0.75 * 1.5, 0.75 * 1.5, 1, 64);
+let lander4Geometry = new THREE.CylinderGeometry(0.2, 0.75, 1, 64);
+
+let landerRingGeometry = new THREE.CylinderGeometry(0.75 * 1.5, 0.75 * 1.5, 0.2, 64);
+
+
+let lander5Geometry = new THREE.BoxGeometry(0.3, 0.75, 0.15);
+
+
+let lander1Material = new THREE.MeshBasicMaterial({color: 0xb3b3b3}); 
+let lander2Material = new THREE.MeshBasicMaterial({color: 0xb3b3b3}); 
+let lander3Material = new THREE.MeshBasicMaterial({color: 0xb3b3b3}); 
+let lander4Material = new THREE.MeshBasicMaterial({color: 0x666666}); 
+
+let lander5Material = new THREE.MeshBasicMaterial({color: 0xd9d9d9}); 
+
+
+let lander1 = new THREE.Mesh(lander1Geometry, lander1Material);
+let lander2 = new THREE.Mesh(lander2Geometry, lander2Material);
+let lander3 = new THREE.Mesh(lander3Geometry, lander3Material);
+let lander4 = new THREE.Mesh(lander4Geometry, lander4Material);
+
+let landerRing = new THREE.Mesh(landerRingGeometry, lander4Material);
+
+let lander5 = new THREE.Mesh(lander5Geometry, lander5Material);
+let lander6 = new THREE.Mesh(lander5Geometry, lander5Material);
+let lander7 = new THREE.Mesh(lander5Geometry, lander5Material);
+let lander8 = new THREE.Mesh(lander5Geometry, lander5Material);
+
+lander1.position.y = 0;
+lander2.position.y = -0.27;
+lander3.position.y = -1.5
+lander4.position.y = -2.2
+
+landerRing.position.y = -.95
+
+lander5.position.y = lander3.position.y
+lander6.position.y = lander3.position.y
+lander7.position.y = lander3.position.y
+lander8.position.y = lander3.position.y
+
+
+lander5.position.x = 0.75 * 1.5
+lander6.position.x = -0.75 * 1.5
+lander7.position.z = 0.75 * 1.5
+lander8.position.z = -0.75 * 1.5
+
+
+landerGroup.add(lander1)
+landerGroup.add(lander2);
+landerGroup.add(lander3);
+landerGroup.add(lander4);
+landerGroup.add(lander5);
+landerGroup.add(lander6);
+landerGroup.add(lander7);
+landerGroup.add(lander8);
+landerGroup.add(landerRing);
+
+
+landerGroup.position.y = 10;
+
+scene.add(landerGroup)
 
 let fuel = 100;
 let fuelMultiplier = 200;
