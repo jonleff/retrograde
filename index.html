@@ -51,17 +51,17 @@
 		</tr>
 
 		<tr>
-			<td>Altitude</td>
-			<td id="altitudeMeter">0</td>
+			<td>Capsule Altitude</td>
+			<td id="capsuleAltitudeMeter">0</td>
 		</tr>
 
 	</table>
 
-	<button>Prograde Burn</button>
+	<button id="progradeBurnButton">Prograde Burn</button>
 
 	<br>
 
-	<button>Retrograde Burn</button>
+	<button id="retrogradeBurnButton">Retrograde Burn</button>
 
 
 
@@ -230,6 +230,7 @@ let thrust = 0.003;
 let progradeBurn = false;
 let retrogradeBurn = false;
 let radialBurn = false;
+let normalBurn = false;
 
 // Create orbit line materials
 let landerPathMaterial = new THREE.LineBasicMaterial({
@@ -259,7 +260,7 @@ scene.add(stationPathLine);
 
 let fuelMeter = document.getElementById("fuelMeter");
 let orbitalVelocityMeter = document.getElementById("orbitalVelocityMeter");
-let altitudeMeter = document.getElementById("altitudeMeter");
+let capsuleAltitudeMeter = document.getElementById("capsuleAltitudeMeter");
 
 
 let starfieldGeometry = new THREE.BoxGeometry(0.3, 0.3, 0.3);
@@ -301,11 +302,11 @@ animate();
 function load() {
 
 	// Orbital injection logic
-	var lander_r = Math.random() * (15 - 10) + 10;
+	let lander_r = Math.random() * (15 - 10) + 10;
 	let lander_phi = Math.PI / 2;
 	let lander_theta = Math.random() * 2 * Math.PI;
 
-	var station_r = Math.random() * (15 - 10) + 10;
+	let station_r = Math.random() * (15 - 10) + 10;
 	let station_phi = Math.PI / 2;
 	let station_theta = Math.random() * 2 * Math.PI;
 
@@ -496,6 +497,33 @@ function move() {
 
 	}
 
+	if (normalBurn) {
+
+        let vHat_x = (lander_y * lander_vz) - (lander_z * lander_vy);
+        let vHat_y = (lander_z * lander_vx) - (lander_x * lander_vz);
+        let vHat_z = (lander_x * lander_vy) - (lander_y * lander_vx);
+
+	    // Calculate the velocity vector's magnitude
+	    let velocityMag = Math.sqrt(
+	        vHat_x * vHat_x + vHat_y * vHat_y + vHat_z * vHat_z
+	    );
+
+	    vHat_x = vHat_x / velocityMag;
+	    vHat_y = vHat_y / velocityMag;
+	    vHat_z = vHat_z / velocityMag;
+
+		if (fuel > 0) {
+			lander_vx += vHat_x * thrust * dt;
+			lander_vy += vHat_y * thrust * dt;
+			lander_vz += vHat_z * thrust * dt;
+
+			fuel -= thrust * fuelMultiplier * dt;
+			fuel = Math.max(fuel, 0);
+			fuelMeter.innerHTML = (Math.round(fuel * 100) / 100).toFixed(2);
+		}
+
+	}
+
 	station_x += station_vx * dt;
 	station_y += station_vy * dt;
 	station_z += station_vz * dt;
@@ -546,7 +574,7 @@ function move() {
 	rLander = Math.sqrt((lander_x * lander_x) + (lander_y * lander_y) + (lander_z * lander_z));
 
 	orbitalVelocityMeter.innerHTML = (Math.round(lander_v * 100) / 100).toFixed(2);
-	altitudeMeter.innerHTML = (Math.round(rLander * 100) / 100).toFixed(2);
+	capsuleAltitudeMeter.innerHTML = (Math.round(rLander * 100) / 100).toFixed(2);
 
 }
 
@@ -669,6 +697,8 @@ window.addEventListener("keydown", (event) => {
 		retrogradeBurn = true;
 	} else if (event.key == "g") {
 		radialBurn = true;
+	} else if (event.key == "n") {
+		normalBurn = true;
 	} else if (event.key == "1") {
 		dt = 0.1;
 	} else if (event.key == "2") {
@@ -686,6 +716,8 @@ window.addEventListener("keyup", (event) => {
 		retrogradeBurn = false;
 	} else if (event.key == "g") {
 		radialBurn = false;
+	} else if (event.key == "n") {
+		normalBurn = false;
 	}
 });
 
