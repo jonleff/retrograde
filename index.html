@@ -110,11 +110,11 @@ orbitControls.enableRotate = true; // Disable orbiting
 orbitControls.enableZoom = true;    // Enable zooming
 orbitControls.maxPolarAngle = ((1 / 3) * Math.PI) + 0.4;
 
-let starGeometry = new THREE.SphereGeometry(5, 64, 32); 
+let starGeometry = new THREE.SphereGeometry(10, 64, 32); 
 let starMaterial = new THREE.MeshBasicMaterial({color: 0xffff00}); 
 let star = new THREE.Mesh(starGeometry, starMaterial);
 
-let dt = 0.5;
+let dt = 1;
 
 let docked = false;
 let crashed = false;
@@ -133,67 +133,134 @@ scene.add(station);
 
 let lander = new THREE.Group();
 
+// Rocket dimensions
 
-let lander1Geometry = new THREE.SphereGeometry(0.75, 64, 32); 
-let lander2Geometry = new THREE.CylinderGeometry(0.75, 0.75 * 1.5, 1, 64);
-let lander3Geometry = new THREE.CylinderGeometry(0.75 * 1.5, 0.75 * 1.5, 1, 64);
-let lander4Geometry = new THREE.CylinderGeometry(0.2, 0.75, 1, 64);
+// Nozzle ring
+let landerNozzleRingHeight = 0.1;
+let landerNozzleRingRadius = 0.75;
 
-let landerRingGeometry = new THREE.CylinderGeometry(0.75 * 1.5, 0.75 * 1.5, 0.2, 64);
+// Nozzle
+let landerNozzleHeight = 1;
+let landerNozzleSmallRadius = 0.2;
+let landerNozzleLargeRadius = 0.75;
 
+// Body
+let landerBodyHeight = 2;
+let landerBodyRadius = 0.75 * 1.5;
 
-let lander5Geometry = new THREE.BoxGeometry(0.3, 0.75, 0.15);
+// Separation ring
+let landerSeparationRingHeight = 0.2;
 
+// Nose cone
+let landerNoseConeSmallRadius = 0.75;
+let landerNoseConeLowerHeight = 1;
+let landerNoseConeUpperRadius = 0.75;
 
-let lander1Material = new THREE.MeshBasicMaterial({color: 0xcccccc}); 
-let lander2Material = new THREE.MeshBasicMaterial({color: 0xcccccc}); 
-let lander3Material = new THREE.MeshBasicMaterial({color: 0xcccccc}); 
-let lander4Material = new THREE.MeshBasicMaterial({color: 0x666666}); 
-
-let lander5Material = new THREE.MeshBasicMaterial({color: 0x666666}); 
-
-
-let lander1 = new THREE.Mesh(lander1Geometry, lander1Material);
-let lander2 = new THREE.Mesh(lander2Geometry, lander2Material);
-let lander3 = new THREE.Mesh(lander3Geometry, lander3Material);
-let lander4 = new THREE.Mesh(lander4Geometry, lander4Material);
-
-let landerRing = new THREE.Mesh(landerRingGeometry, lander4Material);
-
-let lander5 = new THREE.Mesh(lander5Geometry, lander5Material);
-let lander6 = new THREE.Mesh(lander5Geometry, lander5Material);
-let lander7 = new THREE.Mesh(lander5Geometry, lander5Material);
-let lander8 = new THREE.Mesh(lander5Geometry, lander5Material);
-
-lander1.position.y = 0;
-lander2.position.y = -0.27;
-lander3.position.y = -1.5
-lander4.position.y = -2.2
-
-landerRing.position.y = -.95
-
-lander5.position.y = lander3.position.y
-lander6.position.y = lander3.position.y
-lander7.position.y = lander3.position.y
-lander8.position.y = lander3.position.y
+// Fins
+let landerFinWidth = 0.25;
+let landerFinThickness = 0.25;
 
 
-lander5.position.x = 0.75 * 1.5
-lander6.position.x = -0.75 * 1.5
-lander7.position.z = 0.75 * 1.5
-lander8.position.z = -0.75 * 1.5
+let lighterMaterial = new THREE.MeshBasicMaterial({color: 0xcccccc}); 
+let intermediateMaterial = new THREE.MeshBasicMaterial({color: 0x666666}); 
+let darkerMaterial = new THREE.MeshBasicMaterial({color: 0x4d4d4d}); 
 
 
-lander.add(lander1)
-lander.add(lander2);
-lander.add(lander3);
-lander.add(lander4);
-lander.add(lander5);
-lander.add(lander6);
-lander.add(lander7);
-lander.add(lander8);
-lander.add(landerRing);
+let landerNozzleRingGeometry = new THREE.TorusGeometry(
+	landerNozzleRingRadius, 
+	landerNozzleRingHeight, 
+	30,
+	200
+);
 
+let landerNozzleGeometry = new THREE.CylinderGeometry(
+	landerNozzleSmallRadius,
+	landerNozzleLargeRadius,
+	landerNozzleHeight,
+	64
+);
+
+let landerBodyGeometry = new THREE.CylinderGeometry(
+	landerBodyRadius,
+	landerBodyRadius,
+	landerBodyHeight,
+	64
+);
+
+let landerFinGeometry = new THREE.BoxGeometry(
+	landerFinWidth,
+	landerBodyHeight * 0.75,
+	landerFinThickness
+);
+
+
+let landerSeparationRingGeometry = new THREE.CylinderGeometry(
+	landerBodyRadius,
+	landerBodyRadius,
+	landerSeparationRingHeight,
+	64
+);
+
+let landerNoseConeLowerGeometry = new THREE.CylinderGeometry(
+	landerNoseConeSmallRadius,
+	landerBodyRadius,
+	landerNoseConeLowerHeight,
+	64
+);
+
+let landerNoseConeUpperGeometry = new THREE.SphereGeometry(
+	landerNoseConeSmallRadius,
+	64,
+	32
+); 
+
+
+
+
+let landerNozzleRing = new THREE.Mesh(landerNozzleRingGeometry, darkerMaterial);
+let landerNozzle = new THREE.Mesh(landerNozzleGeometry, intermediateMaterial);
+let landerBody = new THREE.Mesh(landerBodyGeometry, lighterMaterial);
+let landerFin1 = new THREE.Mesh(landerFinGeometry, intermediateMaterial);
+let landerFin2 = new THREE.Mesh(landerFinGeometry, intermediateMaterial);
+let landerFin3 = new THREE.Mesh(landerFinGeometry, intermediateMaterial);
+let landerFin4 = new THREE.Mesh(landerFinGeometry, intermediateMaterial);
+
+let landerSeparationRing = new THREE.Mesh(landerSeparationRingGeometry, intermediateMaterial);
+let landerNoseConeLower = new THREE.Mesh(landerNoseConeLowerGeometry, lighterMaterial);
+let landerNoseConeUpper = new THREE.Mesh(landerNoseConeUpperGeometry, lighterMaterial);
+
+
+landerNozzleRing.rotation.x = Math.PI / 2;
+
+
+landerNozzleRing.position.y = 0 - (landerNozzleRingRadius / 2);
+landerNozzle.position.y = 0.1;
+landerBody.position.y = landerNozzle.position.y + (landerBodyHeight / 2) + 0.25;
+landerSeparationRing.position.y = landerBody.position.y + (landerBodyHeight / 2) + (landerSeparationRingHeight / 2);
+landerNoseConeLower.position.y = landerSeparationRing.position.y + (3 * landerSeparationRingHeight);
+landerNoseConeUpper.position.y = landerNoseConeLower.position.y + (1 / 3);
+
+landerFin1.position.y = landerBody.position.y - ((landerBodyHeight - (landerBodyHeight * 0.75)) / 2);
+landerFin2.position.y = landerBody.position.y - ((landerBodyHeight - (landerBodyHeight * 0.75)) / 2);
+landerFin3.position.y = landerBody.position.y - ((landerBodyHeight - (landerBodyHeight * 0.75)) / 2);
+landerFin4.position.y = landerBody.position.y - ((landerBodyHeight - (landerBodyHeight * 0.75)) / 2);
+
+landerFin1.position.x = landerBodyRadius + (landerFinWidth / 2);
+landerFin2.position.x = -landerBodyRadius - (landerFinWidth / 2);
+landerFin3.position.z = landerBodyRadius + (landerFinThickness / 2);
+landerFin4.position.z = -landerBodyRadius - (landerFinThickness / 2);
+
+
+lander.add(landerNozzleRing)
+lander.add(landerNozzle);
+lander.add(landerBody);
+lander.add(landerSeparationRing);
+lander.add(landerNoseConeLower);
+lander.add(landerNoseConeUpper);
+lander.add(landerFin1);
+lander.add(landerFin2);
+lander.add(landerFin3);
+lander.add(landerFin4);
 
 lander.position.y = 10;
 
@@ -225,7 +292,7 @@ let u_x = 0;
 let u_y = 1;
 let u_z = 0;
 
-let thrust = 0.003;
+let thrust = 0.001;
 
 let progradeBurn = false;
 let retrogradeBurn = false;
@@ -302,11 +369,11 @@ animate();
 function load() {
 
 	// Orbital injection logic
-	let lander_r = Math.random() * (15 - 10) + 10;
+	let lander_r = Math.random() * (25 - 15) + 15;
 	let lander_phi = Math.PI / 2;
 	let lander_theta = Math.random() * 2 * Math.PI;
 
-	let station_r = Math.random() * (15 - 10) + 10;
+	let station_r = Math.random() * (25 - 15) + 15;
 	let station_phi = Math.PI / 2;
 	let station_theta = Math.random() * 2 * Math.PI;
 
@@ -361,9 +428,9 @@ function load() {
 	station_vy = v0HatStation_y * vTanStation;
 	station_vz = v0HatStation_z * vTanStation;
 
-	lander.position.x = lander_x;
-	lander.position.y = lander_y;
-	lander.position.z = lander_z;
+	lander.position.x = 0;
+	lander.position.y = 10;
+	lander.position.z = 0;
 
 	station.position.x = station_x;
 	station.position.y = station_y;
@@ -380,7 +447,7 @@ function move() {
 		((lander_z - station_z) * (lander_z - station_z))
 	);
 
-	if (!docked && landerStationDistance <= 1) {
+	if (!docked && landerStationDistance <= 1.5) {
 		
 		console.log("Docking successful");
 
@@ -395,8 +462,7 @@ function move() {
 	let rStation = Math.sqrt((station_x * station_x) + (station_y * station_y) + (station_z * station_z));
 
 	// Sucked into star
-	if (rLander <= 5) {
-		console.log("crashed");
+	if (rLander <= 10) {
 		crashed = true;
 	}
 
@@ -587,7 +653,7 @@ function futureOrbits() {
 	scene.remove(landerPathLine);
 	scene.remove(stationPathLine);
 
-	let numSteps = 1000; // Adjust the number of steps as needed
+	let numSteps = 2000; // Adjust the number of steps as needed
 	let timeStep = 1; // Adjust the time step as needed
 
 	let landerPath = [];
@@ -609,6 +675,8 @@ function futureOrbits() {
 	let station_vy_pred = station_vy;
 	let station_vz_pred = station_vz;
 
+
+	let futureOrbitCrashed = false;
 
 	for (let step = 0; step < numSteps; step++) {
 
@@ -644,17 +712,25 @@ function futureOrbits() {
 	    station_z_pred += station_vz_pred * timeStep;
 
 	    // Store the predicted positions in the arrays
-	    landerPath.push(new THREE.Vector3(
-	    	lander_x_pred, 
-	    	lander_y_pred, 
-	    	lander_z_pred
-	    ));
-	    
+
+	    if (Math.sqrt((lander_x_pred * lander_x_pred) + (lander_y_pred * lander_y_pred) + (lander_z_pred * lander_z_pred)) <= 10) {
+	    	futureOrbitCrashed = true;
+		}
+
+		if (!futureOrbitCrashed) {
+		    landerPath.push(new THREE.Vector3(
+		    	lander_x_pred, 
+		    	lander_y_pred, 
+		    	lander_z_pred
+		    ));
+		}
+
 	    stationPath.push(new THREE.Vector3(
 	    	station_x_pred, 
 	    	station_y_pred, 
 	    	station_z_pred
-	    ));	
+	    ));
+
 
 	}
 
@@ -702,9 +778,9 @@ window.addEventListener("keydown", (event) => {
 	} else if (event.key == "1") {
 		dt = 0.1;
 	} else if (event.key == "2") {
-		dt = 0.5;
+		dt = 1;
 	} else if (event.key == "3") {
-		dt = 1.5;
+		dt = 2;
 	}
 });
 
